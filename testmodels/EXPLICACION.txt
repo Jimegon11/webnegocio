@@ -1,0 +1,180 @@
+=========================================================
+  EXPLICACIÓN DEL PROYECTO: API REST DE USUARIOS - LARAVEL
+=========================================================
+
+OBJETIVO
+--------
+Crear una API funcional en Laravel con rutas y funcionalidades para el
+modelo User, con los siguientes endpoints:
+  - get: Devuelve la paginación de los diez primeros usuarios.
+  - create: Crea un usuario en la base de datos.
+  - login: Devuelve los datos de un usuario introduciendo email y contraseña.
+  - update_username: Actualiza el username de un usuario.
+  - update_email: Actualiza el email de un usuario.
+  - update_password: Actualiza la contraseña de un usuario.
+  - delete: Elimina el usuario pasándole email y contraseña.
+
+
+=========================================================
+  PASO 1 - MIGRACIÓN (database/migrations/2026_09_24_065418_create_users_table.php)
+=========================================================
+
+Se creó (y personalizó) la migración para la tabla "users" con los
+siguientes campos:
+  - id: Clave primaria autoincremental.
+  - username: Nombre de usuario (string).
+  - email: Correo electrónico (string).
+  - password: Contraseña (string).
+  - timestamps: Campos created_at y updated_at automáticos de Laravel.
+
+Se eliminaron los campos que venían por defecto en Laravel que no
+necesitábamos (como name, email_verified_at, remember_token, etc.)
+para adaptarla exactamente a los requisitos del ejercicio.
+
+Finalmente se ejecutó "php artisan migrate:fresh" para recrear todas
+las tablas desde cero y evitar errores de tabla ya existente.
+
+
+=========================================================
+  PASO 2 - MODELO (app/Models/User.php)
+=========================================================
+
+Se generó el modelo User con "php artisan make:model User" y se
+configuró con las siguientes características:
+
+  - Extiende "Authenticatable" (en lugar del Model genérico) para
+    que sea compatible con el sistema de autenticación de Laravel.
+  - Se añadieron los traits: HasFactory (para factories y tests)
+    y Notifiable (para notificaciones).
+  - $fillable: Se definieron los campos que se pueden asignar
+    masivamente: username, email, password.
+  - $hidden: Se ocultó el campo password en las respuestas JSON
+    para no exponer la contraseña en las peticiones.
+  - casts(): Se añadió el cast 'hashed' para el campo password,
+    de modo que Laravel hashea automáticamente la contraseña
+    cada vez que se guarda un usuario, sin necesidad de usar
+    Hash::make() manualmente.
+
+
+=========================================================
+  PASO 3 - CONTROLADOR (app/Http/Controllers/UserController.php)
+=========================================================
+
+Se generó el controlador con "php artisan make:controller UserController"
+y se implementaron los siguientes métodos:
+
+  1. index()
+     - Método: GET
+     - Devuelve los usuarios paginados de 10 en 10.
+     - Respuesta: JSON con la paginación de Laravel.
+
+  2. create(Request $request)
+     - Método: POST
+     - Valida que se reciba: username (string, mín. 3 caracteres),
+       email (válido y único en la tabla users), password (mín. 8 caracteres).
+     - Crea el usuario en la base de datos con User::create($data).
+     - Respuesta: JSON con el usuario creado y código HTTP 201.
+
+  3. login(Request $request)
+     - Método: POST
+     - Recibe: email y password.
+     - Busca el usuario por email y comprueba la contraseña con Hash::check().
+     - Si las credenciales son incorrectas devuelve un error 401.
+     - Respuesta: JSON con los datos del usuario si la autenticación es correcta.
+
+  4. updateUsername(Request $request)
+     - Método: PUT
+     - Recibe: email, password y new_username.
+     - Verifica identidad con email + contraseña antes de actualizar.
+     - Actualiza solo el campo username del usuario.
+     - Respuesta: Mensaje de éxito y datos del usuario actualizado.
+
+  5. updateEmail(Request $request)
+     - Método: PUT
+     - Recibe: email, password y new_email.
+     - Verifica identidad con email + contraseña antes de actualizar.
+     - Valida que el nuevo email no esté ya en uso (unique:users,email).
+     - Actualiza solo el campo email del usuario.
+     - Respuesta: Mensaje de éxito y datos del usuario actualizado.
+
+  6. updatePassword(Request $request)
+     - Método: PUT
+     - Recibe: email, password y new_password.
+     - Verifica identidad con email + contraseña antes de actualizar.
+     - Actualiza solo el campo password (Laravel lo hashea automáticamente
+       gracias al cast definido en el modelo).
+     - Respuesta: Mensaje de éxito y datos del usuario actualizado.
+
+  7. delete(Request $request)
+     - Método: DELETE
+     - Recibe: email y password.
+     - Verifica identidad con email + contraseña antes de eliminar.
+     - Elimina el usuario de la base de datos.
+     - Respuesta: Mensaje de confirmación de borrado.
+
+
+=========================================================
+  PASO 4 - RUTAS (routes/api.php)
+=========================================================
+
+Se creó el archivo de rutas API y se registraron todas las rutas
+apuntando a los métodos del UserController:
+
+  GET    /api/users                 -> index()
+  POST   /api/users/create          -> create()
+  POST   /api/users/login           -> login()
+  PUT    /api/users/update_username -> updateUsername()
+  PUT    /api/users/update_email    -> updateEmail()
+  PUT    /api/users/update_password -> updatePassword()
+  DELETE /api/users/delete          -> delete()
+
+Todas las rutas van prefijadas con /api automáticamente por Laravel.
+
+Además, se registró el archivo api.php en bootstrap/app.php para que
+Laravel lo cargue correctamente.
+
+
+=========================================================
+  PASO 5 - COLECCIÓN DE POSTMAN (User_API.postman_collection.json)
+=========================================================
+
+Se generó un archivo de colección de Postman (formato v2.1) con todas
+las peticiones configuradas y listas para usar:
+
+  - Todas las peticiones tienen las cabeceras necesarias (Accept: application/json).
+  - Los cuerpos de las peticiones POST, PUT y DELETE están pre-rellenados
+    con datos de ejemplo para facilitar las pruebas.
+  - Se definió una variable {{base_url}} con el valor "http://testmodels.test"
+    que se puede cambiar fácilmente para apuntar a cualquier entorno.
+
+Para importarlo en Postman:
+  1. Abre Postman.
+  2. Haz clic en "Import".
+  3. Selecciona el archivo User_API.postman_collection.json.
+  4. Ya tendrás todas las llamadas disponibles para probar.
+
+
+=========================================================
+  RESUMEN DE ARCHIVOS CREADOS/MODIFICADOS
+=========================================================
+
+  - database/migrations/2026_09_24_065418_create_users_table.php  [CREADO/MODIFICADO]
+  - app/Models/User.php                                            [CREADO/MODIFICADO]
+  - app/Http/Controllers/UserController.php                        [CREADO/MODIFICADO]
+  - routes/api.php                                                 [CREADO]
+  - bootstrap/app.php                                              [MODIFICADO]
+  - User_API.postman_collection.json                               [CREADO]
+
+
+=========================================================
+  NOTAS TÉCNICAS
+=========================================================
+
+  - La autenticación en todos los endpoints se hace verificando
+    email + contraseña en cada petición. No se usa Sanctum ni tokens JWT
+    para mantener la simplicidad del ejercicio.
+  - Las contraseñas se almacenan siempre hasheadas en la base de datos
+    gracias al cast 'hashed' del modelo User.
+  - El cast 'hashed' es una funcionalidad disponible desde Laravel 10.
+  - La base de datos utilizada es SQLite (database/database.sqlite),
+    que ya viene configurada por defecto en proyectos Laravel modernos.
